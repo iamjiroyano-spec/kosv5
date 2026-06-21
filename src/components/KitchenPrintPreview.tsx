@@ -260,7 +260,7 @@ export default function KitchenPrintPreview({
               </label>
 
               {/* Invoice Details Customization Column */}
-              <div className="border-t border-slate-150 pt-4 space-y-3 font-sans">
+              <div className="border-t border-slate-200 pt-4 space-y-3 font-sans">
                 <span className="block text-xs font-bold text-slate-700 uppercase tracking-wider">Voucher Fields</span>
                 
                 {/* Branch Name Input */}
@@ -312,7 +312,7 @@ export default function KitchenPrintPreview({
               </div>
 
               {/* Chef handwritten instruction area */}
-              <div className="space-y-1.5 border-t border-slate-150 pt-3">
+              <div className="space-y-1.5 border-t border-slate-200 pt-3">
                 <label className="block text-xs font-bold text-slate-700 font-sans flex items-center gap-1.5">
                   <Edit3 className="h-3.5 w-3.5 text-slate-400" />
                   Additional Notes

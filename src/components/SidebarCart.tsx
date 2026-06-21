@@ -34,21 +34,21 @@ interface SidebarCartProps {
 
 // Deterministic aesthetic styling for custom and standard categories to align with main catalog
 const CATEGORY_CHIPS: Record<string, { bg: string; text: string; dot: string }> = {
-  Produce: { bg: "bg-emerald-50 border-emerald-150", text: "text-emerald-700", dot: "bg-emerald-500" },
-  Sauces: { bg: "bg-rose-50 border-rose-150", text: "text-rose-700", dot: "bg-rose-500" },
-  Bakery: { bg: "bg-amber-50 border-amber-150", text: "text-amber-850", dot: "bg-amber-500" },
-  Meat: { bg: "bg-red-50 border-red-150", text: "text-red-700", dot: "bg-red-500" },
-  General: { bg: "bg-sky-50 border-sky-150", text: "text-sky-700", dot: "bg-sky-500" }
+  Produce: { bg: "bg-emerald-50 border-emerald-200", text: "text-emerald-700", dot: "bg-emerald-500" },
+  Sauces: { bg: "bg-rose-50 border-rose-200", text: "text-rose-700", dot: "bg-rose-500" },
+  Bakery: { bg: "bg-amber-50 border-amber-200", text: "text-amber-700", dot: "bg-amber-500" },
+  Meat: { bg: "bg-red-50 border-red-200", text: "text-red-700", dot: "bg-red-500" },
+  General: { bg: "bg-sky-50 border-sky-200", text: "text-sky-700", dot: "bg-sky-500" }
 };
 
 const getCategoryChipStyle = (cat: string) => {
   if (CATEGORY_CHIPS[cat]) return CATEGORY_CHIPS[cat];
   const hash = cat.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
   const colorBands = [
-    { bg: "bg-violet-50 border-violet-150", text: "text-violet-700 font-bold", dot: "bg-violet-500" },
-    { bg: "bg-teal-50 border-teal-150", text: "text-teal-700 font-bold", dot: "bg-teal-500" },
-    { bg: "bg-orange-50 border-orange-150", text: "text-orange-855 font-bold", dot: "bg-orange-500" },
-    { bg: "bg-fuchsia-50 border-fuchsia-150", text: "text-fuchsia-700 font-bold", dot: "bg-fuchsia-500" }
+    { bg: "bg-violet-50 border-violet-200", text: "text-violet-700 font-bold", dot: "bg-violet-500" },
+    { bg: "bg-teal-50 border-teal-200", text: "text-teal-700 font-bold", dot: "bg-teal-500" },
+    { bg: "bg-orange-50 border-orange-200", text: "text-orange-700 font-bold", dot: "bg-orange-500" },
+    { bg: "bg-fuchsia-50 border-fuchsia-200", text: "text-fuchsia-700 font-bold", dot: "bg-fuchsia-500" }
   ];
   return colorBands[hash % colorBands.length];
 };
@@ -129,7 +129,7 @@ export default function SidebarCart({
             {/* Manifest Header Controls */}
             <div className="px-5 py-4 bg-slate-50/75 border-b border-slate-200/70 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="bg-emerald-50 border border-emerald-150 p-2 rounded-xl text-emerald-700 shadow-xs">
+                <div className="bg-emerald-50 border border-emerald-200 p-2 rounded-xl text-emerald-700 shadow-xs">
                   <ListTodo className="h-4 w-4" />
                 </div>
                 <div>
@@ -240,7 +240,7 @@ export default function SidebarCart({
 
                           {/* Unit Rate */}
                           {!isSubAccount && (
-                            <td className="p-4 text-right font-mono text-slate-550 font-bold">
+                            <td className="p-4 text-right font-mono text-slate-500 font-bold">
                               {currency.symbol}{orderItem.Rate.toFixed(2)}
                             </td>
                           )}
@@ -271,7 +271,7 @@ export default function SidebarCart({
             </div>
 
             {/* Sub-Manifest statistics */}
-            <div className="bg-slate-50/50 p-4 border-t border-slate-150 flex items-center justify-between text-xs text-slate-500 font-sans font-medium">
+            <div className="bg-slate-50/50 p-4 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500 font-sans font-medium">
               <span>Dynamic Staging Pipeline</span>
               <div className="flex items-center gap-1">
                 <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
@@ -295,14 +295,14 @@ export default function SidebarCart({
             <div className="absolute bottom-0 left-0 h-16 w-16 bg-black/10 rounded-full -ml-8 -mb-8 pointer-events-none" />
 
             <div className="flex items-center gap-3">
-              <div className="bg-emerald-550/80 p-2.5 rounded-xl border border-emerald-500 shadow-sm shrink-0">
+              <div className="bg-emerald-500/85 p-2.5 rounded-xl border border-emerald-500 shadow-sm shrink-0">
                 <Package className="h-5 w-5 text-emerald-100" />
               </div>
               <div>
                 <h3 className="font-display font-black text-sm uppercase tracking-wider text-emerald-100">
                   Summary Totals
                 </h3>
-                <div className="flex items-center gap-2 mt-0.5 text-xs text-emerald-250">
+                <div className="flex items-center gap-2 mt-0.5 text-xs text-emerald-200">
                   <span className="font-extrabold">{totalItemTypes}</span> types
                   <span>•</span>
                   <span className="font-extrabold">{totalItemVolume}</span> cumulative units
@@ -365,8 +365,8 @@ export default function SidebarCart({
               disabled={isCartEmpty}
               className={`w-full py-3.5 rounded-xl text-xs font-bold tracking-widest uppercase transition-all duration-200 flex items-center justify-center gap-2 border ${
                 isCartEmpty
-                  ? "bg-slate-50 text-slate-400 border-slate-150 cursor-not-allowed shadow-none"
-                  : "bg-white hover:bg-slate-50 border-slate-350 text-slate-700 hover:text-slate-900 cursor-pointer shadow-inner-sm active:scale-[0.98]"
+                  ? "bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed shadow-none"
+                  : "bg-white hover:bg-slate-50 border-slate-300 text-slate-700 hover:text-slate-900 cursor-pointer shadow-inner-sm active:scale-[0.98]"
               }`}
             >
               <Printer className="h-4 w-4" />

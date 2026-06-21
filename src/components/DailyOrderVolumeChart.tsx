@@ -306,7 +306,7 @@ export default function DailyOrderVolumeChart({
           </button>
         ) : (
           <div className="flex items-center gap-3 p-3.5 rounded-xl border border-dashed border-slate-200/40 bg-slate-50/20 text-slate-400 text-left select-none sm:col-span-1">
-            <div className="p-2 rounded-lg bg-slate-100 text-slate-400 border border-slate-150">
+            <div className="p-2 rounded-lg bg-slate-100 text-slate-400 border border-slate-200">
               <Coins className="h-4 w-4" />
             </div>
             <div className="flex-1 min-w-0">

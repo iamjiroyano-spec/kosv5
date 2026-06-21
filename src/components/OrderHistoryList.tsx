@@ -132,12 +132,12 @@ export default function OrderHistoryList({
                         ID: {record.id.slice(0, 8).toUpperCase()}
                       </span>
                       {isAllReceived ? (
-                        <span className="bg-emerald-100 text-emerald-800 border border-emerald-250 font-sans text-[9px] font-black px-1.5 py-0.5 rounded flex items-center gap-1 select-none">
+                        <span className="bg-emerald-100 text-emerald-800 border border-emerald-200 font-sans text-[9px] font-black px-1.5 py-0.5 rounded flex items-center gap-1 select-none">
                           <CheckCircle2 className="h-2.5 w-2.5 shrink-0" />
                           COMPLETED
                         </span>
                       ) : (
-                        <span className="bg-amber-100/80 text-amber-850 border border-amber-200/80 font-sans text-[9px] font-black px-1.5 py-0.5 rounded flex items-center gap-1 select-none">
+                        <span className="bg-amber-100/80 text-amber-900 border border-amber-200/80 font-sans text-[9px] font-black px-1.5 py-0.5 rounded flex items-center gap-1 select-none">
                           <Clock className="h-2.5 w-2.5 shrink-0 animate-pulse text-amber-600" />
                           PENDING
                         </span>
@@ -223,7 +223,7 @@ export default function OrderHistoryList({
                           <div 
                             key={idx}
                             className={`bg-white rounded-lg p-2.5 border flex items-center justify-between text-xs transition duration-150 ${
-                              isReceived ? "border-emerald-250 bg-emerald-50/10 shadow-xs" : "border-slate-200/40 shadow-xs"
+                              isReceived ? "border-emerald-200 bg-emerald-50/10 shadow-xs" : "border-slate-200/40 shadow-xs"
                             }`}
                           >
                             <div className="min-w-0 flex-1 flex items-center gap-2.5">
@@ -246,12 +246,12 @@ export default function OrderHistoryList({
 
                             <div className="flex items-center gap-2.5 shrink-0 font-sans text-slate-500 text-[11px]">
                               {isReceived ? (
-                                <span className="flex items-center gap-1 font-sans text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-150 rounded px-1.5 py-0.5 select-none shrink-0" title="Received">
+                                <span className="flex items-center gap-1 font-sans text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-1.5 py-0.5 select-none shrink-0" title="Received">
                                   <CheckCircle2 className="h-3 w-3 text-emerald-500 shrink-0" />
                                   <span>Received</span>
                                 </span>
                               ) : (
-                                <span className="flex items-center gap-1 font-sans text-[10px] font-bold text-amber-700 bg-amber-50/60 border border-amber-150 rounded px-1.5 py-0.5 select-none shrink-0" title="Pending">
+                                <span className="flex items-center gap-1 font-sans text-[10px] font-bold text-amber-700 bg-amber-50/60 border border-amber-200 rounded px-1.5 py-0.5 select-none shrink-0" title="Pending">
                                   <Clock className="h-3 w-3 text-amber-500 shrink-0 animate-pulse" />
                                   <span>Pending</span>
                                 </span>
@@ -262,12 +262,12 @@ export default function OrderHistoryList({
                                   <span className="font-mono text-slate-400 text-[10px]">
                                     {item.Quantity} x {currency.symbol}{item.Rate?.toFixed(2)}
                                   </span>
-                                  <span className="font-mono bg-emerald-50 text-emerald-850 border border-emerald-100 rounded px-1.5 py-0.5 font-bold">
+                                  <span className="font-mono bg-emerald-50 text-emerald-800 border border-emerald-100 rounded px-1.5 py-0.5 font-bold">
                                     {currency.symbol}{calculatedGross.toFixed(2)}
                                   </span>
                                 </>
                               ) : (
-                                <span className="font-mono bg-slate-55 text-slate-75 border border-slate-10 rounded px-1.5 py-0.5 font-bold">
+                                <span className="font-mono bg-slate-50 text-slate-700 border border-slate-200 rounded px-1.5 py-0.5 font-bold">
                                   {item.Quantity} {item.Unit_Type || "units"}
                                 </span>
                               )}
