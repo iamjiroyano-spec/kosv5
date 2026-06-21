@@ -1,0 +1,6 @@
+{
+  "name": "Kitchen Order System V4",
+  "description": "An interactive kitchen order and reservation system featuring real-time tracking, dual-tier local database hub, analytical charts, template spreadsheet management, and an intelligent AI sommelier recommendation co-pilot.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
