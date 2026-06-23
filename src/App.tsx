@@ -19,7 +19,7 @@ import ItemGrid from "./components/ItemGrid";
 import SidebarCart from "./components/SidebarCart";
 import OrderHistoryList from "./components/OrderHistoryList";
 import LoginScreen from "./components/LoginScreen";
-import DailyOrderVolumeChart from "./components/DailyOrderVolumeChart";
+import ConsumptionDashboard from "./components/ConsumptionDashboard";
 import { 
   Check, 
   AlertCircle, 
@@ -38,11 +38,20 @@ import {
   Save,
   RefreshCw,
   Trash2,
+  Tag,
+  Plus,
+  ChevronDown,
   Download,
   Upload,
   SlidersHorizontal,
   Layers,
-  Sparkles
+  Sparkles,
+  BarChart3,
+  LogIn,
+  LogOut,
+  Utensils,
+  Menu,
+  Clock
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { motion, AnimatePresence } from "motion/react";
@@ -317,6 +326,7 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchQtyFilter, setSearchQtyFilter] = useState("all");
   const [searchExactCode, setSearchExactCode] = useState("");
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   // Sync favorites to localStorage
   useEffect(() => {
@@ -361,11 +371,247 @@ export default function App() {
     }));
   }, []);
   const [customNotes, setCustomNotes] = useState("");
-  const [activeGlobalTab, setActiveGlobalTab] = useState<"catalog" | "cart" | "history" | "admin" | "db_hub">("catalog");
+  const [activeGlobalTab, setActiveGlobalTab] = useState<"catalog" | "cart" | "history" | "admin" | "db_hub" | "ordering" | "consumption">("catalog");
+  
+  // Kitchen workflow sections lift state up to share filter globally
+  const [sectionsList, setSectionsList] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem("kitchen_app_user_sections");
+      return saved ? JSON.parse(saved) : ["Main Kitchen", "Prep Station", "Dry Storage", "Walk-In Cooler"];
+    } catch {
+      return ["Main Kitchen", "Prep Station", "Dry Storage", "Walk-In Cooler"];
+    }
+  });
+
+  const [itemSectionTags, setItemSectionTags] = useState<Record<string, string>>(() => {
+    try {
+      const saved = localStorage.getItem("kitchen_app_item_sections");
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const [selectedSection, setSelectedSection] = useState<string>("All");
+  const [isAddingSection, setIsAddingSection] = useState(false);
+  const [newSectionName, setNewSectionName] = useState("");
+
+  const handleTagSection = useCallback((itemId: string, section: string) => {
+    setItemSectionTags(prev => {
+      const next = { ...prev };
+      if (!section) {
+        delete next[itemId];
+      } else {
+        next[itemId] = section;
+      }
+      localStorage.setItem("kitchen_app_item_sections", JSON.stringify(next));
+      return next;
+    });
+  }, []);
   
   const [subAccounts, setSubAccounts] = useState<SubAccount[]>([]);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+
+  const renderSidebarContent = (isMobileView = false) => {
+    return (
+      <div className="flex flex-col gap-5">
+        <div className="flex items-center justify-between pb-1.5 border-b border-slate-100">
+          <div className="flex flex-col gap-1">
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-sans">
+              System Console
+            </span>
+            <span className="text-xs font-bold text-slate-700 font-sans">
+              Select Hub Workspace
+            </span>
+          </div>
+          {isMobileView && (
+            <button
+              onClick={() => setIsMobileSidebarOpen(false)}
+              className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-50 transition cursor-pointer"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+
+        {/* Vertical Side Tab Buttons */}
+        <nav className="flex flex-col gap-2">
+          <button
+            onClick={() => {
+              setActiveGlobalTab("catalog");
+              if (isMobileView) setIsMobileSidebarOpen(false);
+            }}
+            className={`flex items-center gap-3.5 px-4 py-3.5 rounded-xl text-xs font-bold cursor-pointer transition-all ${
+              activeGlobalTab === "catalog"
+                ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/10 border-l-4 border-emerald-600"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-50 border-l-4 border-transparent"
+            }`}
+          >
+            <UtensilsCrossed className="h-4 w-4 shrink-0" />
+            <span className="flex-1 text-left font-sans">Master Catalog</span>
+            <span className={`text-[10px] font-bold font-mono px-2 py-0.5 rounded-full ${
+              activeGlobalTab === "catalog" ? "bg-emerald-600 text-emerald-50" : "bg-slate-100 text-slate-500"
+            }`}>
+              {inventory.length}
+            </span>
+          </button>
+
+          <button
+            onClick={() => {
+              setActiveGlobalTab("ordering");
+              if (isMobileView) setIsMobileSidebarOpen(false);
+            }}
+            className={`flex items-center gap-3.5 px-4 py-3.5 rounded-xl text-xs font-bold cursor-pointer transition-all ${
+              activeGlobalTab === "ordering"
+                ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/10 border-l-4 border-emerald-600"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-50 border-l-4 border-transparent"
+            }`}
+          >
+            <ClipboardList className="h-4 w-4 shrink-0" />
+            <span className="flex-1 text-left font-sans">Ordering</span>
+            <span className={`text-[10px] font-bold font-mono px-2 py-0.5 rounded-full ${
+              activeGlobalTab === "ordering" ? "bg-emerald-600 text-emerald-50" : "bg-slate-100 text-slate-500"
+            }`}>
+              {stagedCount}
+            </span>
+          </button>
+
+          <button
+            onClick={() => {
+              setActiveGlobalTab("history");
+              if (isMobileView) setIsMobileSidebarOpen(false);
+            }}
+            className={`flex items-center gap-3.5 px-4 py-3.5 rounded-xl text-xs font-bold cursor-pointer transition-all ${
+              activeGlobalTab === "history"
+                ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/10 border-l-4 border-emerald-600"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-50 border-l-4 border-transparent"
+            }`}
+          >
+            <History className="h-4 w-4 shrink-0" />
+            <span className="flex-1 text-left font-sans">History Archives</span>
+            <span className={`text-[10px] font-bold font-mono px-2 py-0.5 rounded-full ${
+              activeGlobalTab === "history" ? "bg-emerald-600 text-emerald-50" : "bg-slate-100 text-slate-500"
+            }`}>
+              {history.length}
+            </span>
+          </button>
+
+          <button
+            onClick={() => {
+              setActiveGlobalTab("consumption");
+              if (isMobileView) setIsMobileSidebarOpen(false);
+            }}
+            id="consumption-tab-btn"
+            className={`flex items-center gap-3.5 px-4 py-3.5 rounded-xl text-xs font-bold cursor-pointer transition-all ${
+              activeGlobalTab === "consumption"
+                ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/10 border-l-4 border-emerald-600"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-50 border-l-4 border-transparent"
+            }`}
+          >
+            <BarChart3 className="h-4 w-4 shrink-0" />
+            <span className="flex-1 text-left font-sans">Consumption Hub</span>
+            <span className={`text-[10px] font-bold font-mono px-2 py-0.5 rounded-full ${
+              activeGlobalTab === "consumption" ? "bg-emerald-600 text-emerald-50" : "bg-slate-100 text-slate-550"
+            }`}>
+              1M
+            </span>
+          </button>
+
+          {currentUser?.isAdmin && (
+            <button
+              onClick={() => {
+                setActiveGlobalTab("admin");
+                if (isMobileView) setIsMobileSidebarOpen(false);
+              }}
+              className={`flex items-center gap-3.5 px-4 py-3.5 rounded-xl text-xs font-bold cursor-pointer transition-all ${
+                activeGlobalTab === "admin"
+                  ? "bg-slate-800 text-white shadow-md shadow-slate-800/10 border-l-4 border-slate-900"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-50 border-l-4 border-transparent"
+              }`}
+            >
+              <Shield className="h-4 w-4 shrink-0 text-amber-500 animate-pulse" />
+              <span className="flex-1 text-left font-sans">Admin Console</span>
+              <span className={`text-[10px] font-bold font-mono px-2 py-0.5 rounded-full ${
+                activeGlobalTab === "admin" ? "bg-slate-900 text-slate-100" : "bg-slate-100 text-slate-500"
+              }`}>
+                {subAccounts.length}
+              </span>
+            </button>
+          )}
+
+          <button
+            onClick={() => {
+              setActiveGlobalTab("db_hub");
+              if (isMobileView) setIsMobileSidebarOpen(false);
+            }}
+            id="db-hub-tab-btn"
+            className={`flex items-center gap-3.5 px-4 py-3.5 rounded-xl text-xs font-bold cursor-pointer transition-all ${
+              activeGlobalTab === "db_hub"
+                ? "bg-slate-800 text-white shadow-md shadow-slate-800/10 border-l-4 border-amber-505"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-50 border-l-4 border-transparent"
+            }`}
+          >
+            <Database className="h-4 w-4 shrink-0 text-amber-500 animate-pulse" />
+            <span className="flex-1 text-left font-sans">Database Hub</span>
+            <span className={`text-[10px] font-bold font-mono px-1.5 py-0.5 rounded-full ${
+              activeGlobalTab === "db_hub" ? "bg-slate-900 text-amber-400" : "bg-amber-50 text-amber-700 font-bold"
+            }`}>
+              Hub
+            </span>
+          </button>
+        </nav>
+
+        {/* Dynamic User Profile / Google Session & Sub-account Portal Card */}
+        <div className="mt-4 pt-4 border-t border-slate-100 flex flex-col gap-3">
+          {currentUser ? (
+            <div className="flex items-center justify-between bg-emerald-50/60 p-3 rounded-xl border border-emerald-100 shadow-3xs">
+              <div className="flex items-center gap-2.5 min-w-0">
+                {currentUser.photoURL ? (
+                  <img 
+                    src={currentUser.photoURL} 
+                    alt="User profile" 
+                    className="h-8 w-8 rounded-lg border border-emerald-100 object-cover shrink-0"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <div className="h-8 w-8 rounded-lg bg-emerald-600 text-white font-black text-xs flex items-center justify-center font-sans uppercase shrink-0">
+                    {(currentUser.displayName || currentUser.username)?.[0] || "C"}
+                  </div>
+                )}
+                <div className="text-left min-w-0">
+                  <span className="block text-xs font-bold text-slate-800 truncate leading-tight">
+                    {currentUser.displayName || currentUser.username || "Chef"}
+                  </span>
+                  <span className="block text-[9px] text-emerald-600 font-mono leading-none mt-1">
+                    {currentUser.isAdmin ? "System Admin" : `${currentUser.role || "Staff"} Account`}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={handleSignOut}
+                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-white rounded-lg transition-all cursor-pointer shrink-0 border border-transparent hover:border-slate-100 shadow-3xs"
+                title="Sign Out"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => {
+                setIsLoginModalOpen(true);
+                if (isMobileView) setIsMobileSidebarOpen(false);
+              }}
+              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white py-3 px-4 rounded-xl text-xs font-black shadow-sm tracking-wide cursor-pointer transition active:scale-95"
+            >
+              <LogIn className="h-4 w-4 shrink-0" />
+              Sign Into Session
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   const [dbHubSelectedTab, setDbHubSelectedTab] = useState<"catalog" | "history" | "subaccounts">("catalog");
   const [dbHubEditorInput, setDbHubEditorInput] = useState("");
@@ -1379,7 +1625,7 @@ export default function App() {
           authError={authError}
         />
       ) : (
-        <>
+        <div className="flex-grow flex flex-col lg:flex-row w-full min-h-screen relative">
           {/* Unified Security Login Portal Modal */}
       <AnimatePresence>
         {isLoginModalOpen && (
@@ -1613,171 +1859,203 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* Header Container */}
-      <Header
-        liveTime={liveTime}
-        activeShift={activeShift}
-        setActiveShift={setActiveShift}
-        catalogLength={inventory.length}
-        errorMessage={errorMsg}
-        clearError={() => setErrorMsg(null)}
-        
-        // Auth variables passed
-        user={currentUser}
-        onSignIn={() => setIsLoginModalOpen(true)}
-        onSignOut={handleSignOut}
-
-        // Currency variables passed
-        currency={currency}
-        onCurrencyChange={handleCurrencyChange}
-      />
-
-      {/* Main Board Area Wrapper */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        
-        {/* Responsive Side-Menu Grid Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
-          {/* LEFT COLUMN: Premium Sticky Side-Menu Panel */}
-          <div className="lg:col-span-3 flex flex-col gap-6">
-            <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex flex-col gap-5">
-              <div className="flex flex-col gap-1 pb-1.5 border-b border-slate-100">
-                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-sans">
-                  System Console
-                </span>
-                <span className="text-xs font-bold text-slate-700 font-sans">
-                  Select Hub Workspace
-                </span>
-              </div>
-
-              {/* Vertical Side Tab Buttons */}
-              <nav className="flex flex-col gap-2">
-                <button
-                  onClick={() => setActiveGlobalTab("catalog")}
-                  className={`flex items-center gap-3.5 px-4 py-3.5 rounded-xl text-xs font-bold cursor-pointer transition-all ${
-                    activeGlobalTab === "catalog"
-                      ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/10 border-l-4 border-emerald-600"
-                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-50 border-l-4 border-transparent"
-                  }`}
-                >
-                  <UtensilsCrossed className="h-4 w-4 shrink-0" />
-                  <span className="flex-1 text-left font-sans">Master Catalog</span>
-                  <span className={`text-[10px] font-bold font-mono px-2 py-0.5 rounded-full ${
-                    activeGlobalTab === "catalog" ? "bg-emerald-600 text-emerald-50" : "bg-slate-100 text-slate-500"
-                  }`}>
-                    {inventory.length}
-                  </span>
-                </button>
-
-                <button
-                  onClick={() => setActiveGlobalTab("cart")}
-                  className={`flex items-center gap-3.5 px-4 py-3.5 rounded-xl text-xs font-bold cursor-pointer transition-all relative ${
-                    activeGlobalTab === "cart"
-                      ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/10 border-l-4 border-emerald-600"
-                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-50 border-l-4 border-transparent"
-                  }`}
-                >
-                  <ShoppingBag className="h-4 w-4 shrink-0" />
-                  <span className="flex-1 text-left font-sans">Transmit Manifest</span>
-                  {stagedCount > 0 ? (
-                    <span className={`text-[10px] font-extrabold font-mono px-2 py-0.5 rounded-full ${
-                      activeGlobalTab === "cart" ? "bg-white text-emerald-600 font-black" : "bg-emerald-500 text-white"
-                    } animate-pulse`}>
-                      {stagedCount}
-                    </span>
-                  ) : (
-                    <span className={`text-[10px] font-bold font-mono px-2 py-0.5 rounded-full ${
-                      activeGlobalTab === "cart" ? "bg-emerald-600 text-emerald-50" : "bg-slate-100 text-slate-500"
-                    }`}>
-                      0
-                    </span>
-                  )}
-                </button>
-
-                <button
-                  onClick={() => setActiveGlobalTab("history")}
-                  className={`flex items-center gap-3.5 px-4 py-3.5 rounded-xl text-xs font-bold cursor-pointer transition-all ${
-                    activeGlobalTab === "history"
-                      ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/10 border-l-4 border-emerald-600"
-                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-50 border-l-4 border-transparent"
-                  }`}
-                >
-                  <History className="h-4 w-4 shrink-0" />
-                  <span className="flex-1 text-left font-sans">History Archives</span>
-                  <span className={`text-[10px] font-bold font-mono px-2 py-0.5 rounded-full ${
-                    activeGlobalTab === "history" ? "bg-emerald-600 text-emerald-50" : "bg-slate-100 text-slate-500"
-                  }`}>
-                    {history.length}
-                  </span>
-                </button>
-
-                {currentUser?.isAdmin && (
-                  <button
-                    onClick={() => setActiveGlobalTab("admin")}
-                    className={`flex items-center gap-3.5 px-4 py-3.5 rounded-xl text-xs font-bold cursor-pointer transition-all ${
-                      activeGlobalTab === "admin"
-                        ? "bg-slate-800 text-white shadow-md shadow-slate-800/10 border-l-4 border-slate-900"
-                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-50 border-l-4 border-transparent"
-                    }`}
-                  >
-                    <Shield className="h-4 w-4 shrink-0 text-amber-500 animate-pulse" />
-                    <span className="flex-1 text-left font-sans">Admin Console</span>
-                    <span className={`text-[10px] font-bold font-mono px-2 py-0.5 rounded-full ${
-                      activeGlobalTab === "admin" ? "bg-slate-900 text-slate-100" : "bg-slate-100 text-slate-500"
-                    }`}>
-                      {subAccounts.length}
-                    </span>
-                  </button>
-                )}
-
-                <button
-                  onClick={() => setActiveGlobalTab("db_hub")}
-                  id="db-hub-tab-btn"
-                  className={`flex items-center gap-3.5 px-4 py-3.5 rounded-xl text-xs font-bold cursor-pointer transition-all ${
-                    activeGlobalTab === "db_hub"
-                      ? "bg-slate-800 text-white shadow-md shadow-slate-800/10 border-l-4 border-amber-500"
-                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-50 border-l-4 border-transparent"
-                  }`}
-                >
-                  <Database className="h-4 w-4 shrink-0 text-amber-500 animate-pulse" />
-                  <span className="flex-1 text-left font-sans">Database Hub</span>
-                  <span className={`text-[10px] font-bold font-mono px-1.5 py-0.5 rounded-full ${
-                    activeGlobalTab === "db_hub" ? "bg-slate-900 text-amber-400" : "bg-amber-50 text-amber-700 font-bold"
-                  }`}>
-                    Hub
-                  </span>
-                </button>
-              </nav>
-
+      {/* PERSISTENT LEFT DETAILED DASHBOARD SIDEBAR (DESKTOP) */}
+      <aside className="hidden lg:flex lg:w-72 bg-white border-r border-slate-200/85 sticky top-0 h-screen flex-col justify-between p-6 shrink-0 shadow-[1px_0_5px_rgba(0,0,0,0.02)] z-30">
+        <div className="flex flex-col gap-6 overflow-y-auto pr-1">
+          {/* Brand/System Logo block */}
+          <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
+            <div className="bg-emerald-600 text-white p-2.5 rounded-xl shadow-md shadow-emerald-500/10 shrink-0">
+              <Utensils className="h-5.5 w-5.5" />
             </div>
-            
-            {/* If there's an active draft, render a small summary prompt */}
-            {activeGlobalTab !== "cart" && stagedCount > 0 && (
-              <div 
-                onClick={() => setActiveGlobalTab("cart")}
-                className="bg-emerald-50 border border-emerald-200/60 p-4 rounded-2xl flex items-center justify-between shadow-xs hover:border-emerald-300 transition-all cursor-pointer group animate-fade-in"
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className="p-2 rounded-xl bg-emerald-500 text-white group-hover:scale-110 transition duration-150 animate-bounce">
-                    <ShoppingBag className="h-3.5 w-3.5" />
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-extrabold text-emerald-800 uppercase block font-sans">
-                      Active Draft Running
-                    </span>
-                    <span className="text-[11px] text-emerald-600 font-semibold font-sans mt-0.5 block">
-                      {stagedCount} ingredients staged
-                    </span>
-                  </div>
+            <div>
+              <h1 className="font-display text-sm font-black tracking-tight text-slate-900 leading-none">
+                Kitchen ERP
+              </h1>
+              <span className="text-[9.5px]/none font-bold text-slate-450 font-mono tracking-widest mt-1.5 block">
+                {inventory.length} ITEMS COPIED
+              </span>
+            </div>
+          </div>
+          
+          {renderSidebarContent(false)}
+
+          {/* If there's an active draft, render a small summary prompt */}
+          {activeGlobalTab !== "ordering" && stagedCount > 0 && (
+            <div 
+              onClick={() => setActiveGlobalTab("ordering")}
+              className="bg-emerald-50 border border-emerald-200/60 p-4 rounded-2xl flex items-center justify-between shadow-3xs hover:border-emerald-300 transition-all cursor-pointer group animate-fade-in mt-2"
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="p-2 rounded-xl bg-emerald-500 text-white group-hover:scale-110 transition duration-150 shrink-0">
+                  <ShoppingBag className="h-3.5 w-3.5" />
                 </div>
-                <div className="text-emerald-500 font-bold text-xs select-none font-sans">→</div>
+                <div className="min-w-0">
+                  <span className="text-[10px] font-extrabold text-emerald-800 uppercase block font-sans truncate">
+                    Active Draft Running
+                  </span>
+                  <span className="text-[11px] text-emerald-600 font-semibold font-sans mt-0.5 block truncate">
+                    {stagedCount} items staged
+                  </span>
+                </div>
               </div>
-            )}
+              <div className="text-emerald-500 font-bold text-xs select-none font-sans pl-2">→</div>
+            </div>
+          )}
+        </div>
+
+        {/* Local database indicator at bottom of desktop sidebar */}
+        <div className="border-t border-slate-100 pt-4 flex flex-col gap-2.5">
+          <div className="flex items-center justify-between text-[10px] text-slate-450 uppercase tracking-widest font-mono">
+            <span>Durable Db</span>
+            <span className="text-emerald-600 font-black animate-pulse flex items-center gap-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+              Active
+            </span>
+          </div>
+          <p className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider font-sans">
+            Protected Local Cache Sync
+          </p>
+        </div>
+      </aside>
+
+      {/* Mobile Sidebar Overlay Drawer with Framer Motion */}
+      <AnimatePresence>
+        {isMobileSidebarOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.5 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMobileSidebarOpen(false)}
+              className="fixed inset-0 bg-black z-40 lg:hidden"
+            />
+            {/* Drawer */}
+            <motion.div
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ type: "tween", duration: 0.25, ease: "easeInOut" }}
+              className="fixed inset-y-0 left-0 w-80 max-w-[85vw] bg-white z-50 p-6 shadow-2xl lg:hidden border-r border-slate-200 flex flex-col justify-between overflow-y-auto"
+            >
+              <div className="flex flex-col gap-6">
+                <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-emerald-600 text-white p-2.5 rounded-xl shadow-md shrink-0">
+                      <Utensils className="h-5.5 w-5.5" />
+                    </div>
+                    <div>
+                      <h1 className="font-display text-base font-black tracking-tight text-slate-900 leading-none">
+                        Kitchen ERP
+                      </h1>
+                      <span className="text-[9px] font-bold text-slate-400 font-mono tracking-widest mt-1 block">
+                        MOBILE CONSOLE
+                      </span>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setIsMobileSidebarOpen(false)}
+                    className="p-1 px-2 border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-400 hover:text-slate-700 text-sm"
+                  >
+                    ✕
+                  </button>
+                </div>
+                {renderSidebarContent(true)}
+              </div>
+              
+              <div className="mt-8 border-t border-slate-100 pt-4 text-center">
+                <p className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-widest">
+                  Kitchen ERP v4.0
+                </p>
+                <p className="text-[9px] text-slate-400 mt-1">
+                  Offline-First Local Database Hub
+                </p>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* RIGHT MAIN WORKSPACE AREA */}
+      <div className="flex-grow flex flex-col min-h-screen min-w-0 bg-[#f8fafc]">
+        {/* Dynamic header / Top bar of the workspace column */}
+        <header className="bg-white border-b border-slate-200/80 sticky top-0 z-20 px-6 py-4 flex items-center justify-between shadow-xs">
+          
+          {/* Page title and state indicators based on activeGlobalTab */}
+          <div className="flex items-center gap-3">
+            {/* Mobile menu trigger */}
+            <button
+              onClick={() => setIsMobileSidebarOpen(true)}
+              className="lg:hidden p-2 rounded-xl border border-slate-200 hover:bg-slate-50 transition cursor-pointer"
+            >
+              <Menu className="h-4 w-4 text-emerald-600" />
+            </button>
+            
+            <div>
+              <div className="flex items-center gap-1.5 leading-none">
+                <span className="text-[10px] text-slate-400 font-bold font-sans uppercase tracking-wider">
+                  Workspace
+                </span>
+                <span className="text-xs text-slate-300">/</span>
+                <span className="text-[10px] text-slate-500 font-extrabold font-sans uppercase tracking-wider block">
+                  {activeGlobalTab === "db_hub" ? "Hub DB" : activeGlobalTab}
+                </span>
+              </div>
+              <h2 className="font-display text-sm font-black tracking-tight text-slate-800 uppercase mt-1 leading-none">
+                {activeGlobalTab === "catalog" && "Ingredients Directory"}
+                {activeGlobalTab === "ordering" && "Staged Manifest Staging"}
+                {activeGlobalTab === "history" && "Transmission Archives"}
+                {activeGlobalTab === "consumption" && "Consumption Analytics"}
+                {activeGlobalTab === "admin" && "Administrator Terminal"}
+                {activeGlobalTab === "db_hub" && "Database Raw Caches"}
+              </h2>
+            </div>
           </div>
 
-          {/* RIGHT COLUMN: Interactive Workspaces */}
-          <div className="lg:col-span-9">
-            <AnimatePresence mode="wait">
+          {/* Controls like Live clock, active shift selection, local currencies */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Live Time */}
+            <div className="hidden xl:flex items-center gap-2 bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-505 font-mono">
+              <Clock className="h-3.5 w-3.5 text-emerald-600 animate-pulse" />
+              <span>{liveTime.toLocaleTimeString("en-US", { hour12: true, hour: "2-digit", minute: "2-digit" })}</span>
+            </div>
+
+            {/* Shift Selector */}
+            <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-2 py-0.5 shadow-3xs">
+              <span className="text-[9px] text-slate-400 uppercase font-black px-1.5 hidden sm:inline font-sans font-bold">
+                Shift
+              </span>
+              <select
+                value={activeShift}
+                onChange={(e) => setActiveShift(e.target.value)}
+                className="bg-transparent text-xs text-slate-705 font-bold border-none py-1 px-1 focus:ring-0 focus:outline-none cursor-pointer pr-4 font-sans focus:bg-transparent"
+              >
+                <option value="Morning">Morning</option>
+                <option value="Noon">Noon</option>
+                <option value="Evening">Evening</option>
+                <option value="Night">Night</option>
+              </select>
+            </div>
+
+            {/* Currency Selector */}
+            <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-2 py-0.5 text-xs shadow-3xs font-sans">
+              <span className="text-[9px] text-slate-400 uppercase font-black px-1.5 h-4 flex items-center justify-center shrink-0 border-r border-slate-200 mr-1.5 font-bold">
+                Currency
+              </span>
+              <button
+                onClick={() => handleCurrencyChange(currency.code === "ILS" ? { symbol: "$", code: "USD" } : { symbol: "₪", code: "ILS" })}
+                className="text-slate-750 hover:text-slate-900 font-extrabold focus:outline-none px-1 py-0.5 rounded transition cursor-pointer select-none text-[11px]"
+                title="Toggle Currency Standard"
+              >
+                {currency.code} ({currency.symbol})
+              </button>
+            </div>
+          </div>
+        </header>
+
+        {/* Workspace Active Stream Container */}
+        <main className="flex-grow p-6 sm:p-8 min-w-0">
+          <AnimatePresence mode="wait">
               {activeGlobalTab === "catalog" && (
                 <motion.div
                   key="catalog"
@@ -1795,18 +2073,6 @@ export default function App() {
                       </h2>
                     </div>
                   </div>
-
-                  {/* Smart ERP Speed Search & Autocomplete Order Selector */}
-                  <QuickCatalogSearch
-                    items={inventory}
-                    quantities={quantities}
-                    onQuantityChange={handleQuantityAdjust}
-                    currency={currency}
-                    searchQuery={searchQuery}
-                    setSearchQuery={setSearchQuery}
-                    searchExactCode={searchExactCode}
-                    setSearchExactCode={setSearchExactCode}
-                  />
 
                   <ItemGrid
                     items={inventory}
@@ -1834,43 +2100,211 @@ export default function App() {
                     onToggleFavorite={handleToggleFavorite}
                     itemNotes={itemNotes}
                     onUpdateItemNote={handleUpdateItemNote}
+                    selectedSection={selectedSection}
+                    setSelectedSection={setSelectedSection}
+                    sectionsList={sectionsList}
+                    setSectionsList={setSectionsList}
+                    itemSectionTags={itemSectionTags}
+                    setItemSectionTags={setItemSectionTags}
+                    onTagSection={handleTagSection}
                   />
                 </motion.div>
               )}
 
-              {activeGlobalTab === "cart" && (
+              {activeGlobalTab === "ordering" && (
                 <motion.div
-                  key="cart"
+                  key="ordering"
                   initial={{ opacity: 0, y: 15 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -15 }}
                   transition={{ duration: 0.2 }}
                   className="flex flex-col gap-6"
                 >
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-2">
-                      <ShoppingBag className="h-5 w-5 text-emerald-600" />
-                      <h2 className="font-display text-lg font-black text-slate-800">
-                        Transmit Manifest Workspace
-                      </h2>
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-100 pb-4">
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex items-center gap-2">
+                        <ClipboardList className="h-5 w-5 text-emerald-600 animate-pulse" />
+                        <h2 className="font-display text-lg font-black text-slate-800">
+                          Ordering & Manifest Workspace
+                        </h2>
+                      </div>
                     </div>
-                    <p className="text-slate-500 text-xs sm:text-sm font-sans leading-relaxed">
-                      Review, adjust quantities, preview kitchen prints, and download the compiled Excel order to dispatch or clear the active draft staging environment.
-                    </p>
+
+                    {/* Integrated Kitchen Sections Control - Moved directly here on the top of the ordering menu */}
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-slate-50 border border-slate-200/80 p-3 rounded-2xl min-w-[320px]">
+                      <div className="flex items-center justify-between gap-2 shrink-0">
+                        <span className="text-slate-700 font-bold text-xs font-sans flex items-center gap-1.5">
+                          <Tag className="h-3.5 w-3.5 text-emerald-600" />
+                          Kitchen Sections:
+                        </span>
+                        {selectedSection !== "All" && (
+                          <button
+                            type="button"
+                            onClick={() => setSelectedSection("All")}
+                            className="text-[10px] bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold px-2 py-0.5 rounded-full transition cursor-pointer"
+                          >
+                            Clear
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="flex-1 flex items-center gap-2">
+                        <div className="relative w-full">
+                          <select
+                            value={selectedSection}
+                            onChange={(e) => setSelectedSection(e.target.value)}
+                            className="w-full bg-white border border-slate-200 text-slate-700 font-bold px-3 py-2 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition cursor-pointer appearance-none pr-8 font-sans"
+                          >
+                            <option value="All">All Sections ({Object.values(itemSectionTags).length} tagged)</option>
+                            {sectionsList.map((sec) => {
+                              const taggedCount = Object.values(itemSectionTags).filter(v => v === sec).length;
+                              return (
+                                <option key={sec} value={sec}>
+                                  {sec} {taggedCount > 0 ? `(${taggedCount})` : ""}
+                                </option>
+                              );
+                            })}
+                          </select>
+                          <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                            <ChevronDown className="h-3.5 w-3.5" />
+                          </div>
+                        </div>
+
+                        {selectedSection !== "All" && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (window.confirm(`Are you sure you want to delete the kitchen section "${selectedSection}"?`)) {
+                                setSectionsList(prev => {
+                                  const next = prev.filter(s => s !== selectedSection);
+                                  localStorage.setItem("kitchen_app_user_sections", JSON.stringify(next));
+                                  return next;
+                                });
+                                setItemSectionTags(prev => {
+                                  const next = { ...prev };
+                                  Object.keys(next).forEach(itemId => {
+                                    if (next[itemId] === selectedSection) {
+                                      delete next[itemId];
+                                    }
+                                  });
+                                  localStorage.setItem("kitchen_app_item_sections", JSON.stringify(next));
+                                  return next;
+                                });
+                                setSelectedSection("All");
+                              }
+                            }}
+                            className="p-2 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 rounded-xl transition cursor-pointer shadow-xs text-xs font-bold"
+                            title={`Delete ${selectedSection} Section`}
+                          >
+                            <Trash2 className="p-1.5 h-3.5 w-3.5" />
+                          </button>
+                        )}
+
+                        {/* Inline Creator Trigger */}
+                        {isAddingSection ? (
+                          <div className="flex items-center gap-1.5 animate-fade-in shrink-0 font-sans">
+                            <input
+                              id="new-section-input"
+                              type="text"
+                              placeholder="New section name..."
+                              value={newSectionName}
+                              onChange={(e) => setNewSectionName(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  const trimmed = newSectionName.trim();
+                                  if (trimmed) {
+                                    if (!sectionsList.some(s => s.toLowerCase() === trimmed.toLowerCase())) {
+                                      const updated = [...sectionsList, trimmed];
+                                      setSectionsList(updated);
+                                      localStorage.setItem("kitchen_app_user_sections", JSON.stringify(updated));
+                                      setSelectedSection(trimmed);
+                                    }
+                                    setIsAddingSection(false);
+                                    setNewSectionName("");
+                                  }
+                                } else if (e.key === "Escape") {
+                                  setIsAddingSection(false);
+                                  setNewSectionName("");
+                                }
+                              }}
+                              className="bg-white border border-slate-300 text-slate-800 font-medium px-2.5 py-1.5 rounded-lg text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-hidden max-w-[125px] font-sans"
+                              autoFocus
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const trimmed = newSectionName.trim();
+                                if (trimmed) {
+                                  if (!sectionsList.some(s => s.toLowerCase() === trimmed.toLowerCase())) {
+                                    const updated = [...sectionsList, trimmed];
+                                    setSectionsList(updated);
+                                    localStorage.setItem("kitchen_app_user_sections", JSON.stringify(updated));
+                                    setSelectedSection(trimmed);
+                                  }
+                                  setIsAddingSection(false);
+                                  setNewSectionName("");
+                                }
+                              }}
+                              className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition cursor-pointer font-sans"
+                            >
+                              Add
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsAddingSection(false);
+                                setNewSectionName("");
+                              }}
+                              className="px-2 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-bold transition cursor-pointer font-sans"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setIsAddingSection(true)}
+                            className="p-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 rounded-xl transition cursor-pointer shadow-xs font-semibold shrink-0"
+                            title="New Kitchen Section"
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
-                  <SidebarCart
-                    items={inventory}
+                  {/* Smart ERP Speed Search & Autocomplete Order Selector */}
+                  <QuickCatalogSearch
+                    items={selectedSection === "All" ? inventory : inventory.filter(item => itemSectionTags[item.Item_ID] === selectedSection)}
                     quantities={quantities}
-                    activeShift={activeShift}
                     onQuantityChange={handleQuantityAdjust}
-                    onClearDraft={handleClearDraft}
-                    onSubmitOrder={handleSubmitKitchenOrder}
                     currency={currency}
-                    notes={customNotes}
-                    onNotesChange={setCustomNotes}
-                    isSubAccount={currentUser?.isSubAccount}
+                    searchQuery={searchQuery}
+                    setSearchQuery={setSearchQuery}
+                    searchExactCode={searchExactCode}
+                    setSearchExactCode={setSearchExactCode}
                   />
+
+                  {/* Combined Live Manifest Workspace */}
+                  <div className="border-t border-slate-100 pt-8 mt-4">
+                    <SidebarCart
+                      items={inventory}
+                      quantities={quantities}
+                      activeShift={activeShift}
+                      onQuantityChange={handleQuantityAdjust}
+                      onClearDraft={handleClearDraft}
+                      onSubmitOrder={handleSubmitKitchenOrder}
+                      currency={currency}
+                      onCurrencyChange={handleCurrencyChange}
+                      notes={customNotes}
+                      onNotesChange={setCustomNotes}
+                      isSubAccount={currentUser?.isSubAccount}
+                      selectedSection={selectedSection}
+                      itemSectionTags={itemSectionTags}
+                    />
+                  </div>
                 </motion.div>
               )}
 
@@ -1890,16 +2324,7 @@ export default function App() {
                         Submission Archives & Logs
                       </h2>
                     </div>
-                    <p className="text-slate-500 text-xs sm:text-sm font-sans leading-relaxed">
-                      Access prior completed order manifests, download previous XLSX spreadsheets, and restore quantities directly back onto the active staging canvas.
-                    </p>
                   </div>
-
-                  <DailyOrderVolumeChart
-                    history={history}
-                    currency={currency}
-                    isSubAccount={currentUser?.isSubAccount}
-                  />
 
                   <OrderHistoryList
                     history={history}
@@ -1910,6 +2335,26 @@ export default function App() {
                     isSubAccount={currentUser?.isSubAccount}
                     receivedItems={receivedItems}
                     onToggleReceived={handleToggleReceived}
+                  />
+                </motion.div>
+              )}
+
+              {activeGlobalTab === "consumption" && (
+                <motion.div
+                  key="consumption"
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -15 }}
+                  transition={{ duration: 0.2 }}
+                  className="flex flex-col gap-6"
+                >
+                  <ConsumptionDashboard
+                    history={history}
+                    inventory={inventory}
+                    currency={currency}
+                    userSections={sectionsList}
+                    itemSectionTags={itemSectionTags}
+                    isSubAccount={currentUser?.isSubAccount}
                   />
                 </motion.div>
               )}
@@ -2167,14 +2612,7 @@ export default function App() {
                         Upload Catalog (XLSX)
                       </button>
 
-                      <button
-                        onClick={handleResetToDemoCatalog}
-                        className="px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-sans font-extrabold text-xs rounded-xl flex items-center gap-2 active:scale-95 transition cursor-pointer"
-                        title="Load Pristine Sample Inventory"
-                      >
-                        <Sparkles className="h-3.5 w-3.5 text-amber-500" />
-                        Load Demo Data
-                      </button>
+
 
                       <button
                         onClick={downloadBlankMasterTemplate}
@@ -2294,104 +2732,19 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* Main Split Interface Workspace */}
-                  <div className="grid grid-cols-1 lg:grid-cols-1 gap-8 items-start">
-                    {/* Full Width Column: Selector List */}
-                    <div className="bg-white border border-slate-200/80 rounded-2xl p-6 space-y-4 shadow-sm">
-                      <div className="border-b border-slate-100 pb-3 flex items-center gap-2">
-                        <ClipboardList className="h-4 w-4 text-emerald-600" />
-                        <h3 className="text-xs font-black uppercase text-slate-400 tracking-wider font-sans">
-                          Primary Tables Selection
-                        </h3>
-                      </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <button
-                          onClick={() => setDbHubSelectedTab("catalog")}
-                          className={`p-4 rounded-xl text-left border transition relative flex flex-col gap-1.5 cursor-pointer ${
-                            dbHubSelectedTab === "catalog"
-                              ? "bg-slate-900 border-slate-900 text-white shadow-md"
-                              : "bg-slate-50/50 hover:bg-slate-50 border-slate-200 text-slate-700"
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-extrabold font-sans">Master Catalog Table</span>
-                            <span className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded-full ${
-                              dbHubSelectedTab === "catalog" ? "bg-emerald-600 text-white" : "bg-slate-200 text-slate-600"
-                            }`}>
-                              {inventory.length} rows
-                            </span>
-                          </div>
-                          <span className={`text-[10px] leading-relaxed block ${
-                            dbHubSelectedTab === "catalog" ? "text-slate-300" : "text-slate-400"
-                          }`}>
-                            Main restaurant products cache containing categories, names, and custom wholesale rates.
-                          </span>
-                        </button>
-
-                        <button
-                          onClick={() => setDbHubSelectedTab("history")}
-                          className={`p-4 rounded-xl text-left border transition relative flex flex-col gap-1.5 cursor-pointer ${
-                            dbHubSelectedTab === "history"
-                              ? "bg-slate-900 border-slate-900 text-white shadow-md"
-                              : "bg-slate-50/50 hover:bg-slate-50 border-slate-200 text-slate-700"
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-extrabold font-sans">Transmission Archives</span>
-                            <span className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded-full ${
-                              dbHubSelectedTab === "history" ? "bg-emerald-600 text-white" : "bg-slate-200 text-slate-600"
-                            }`}>
-                              {history.length} rows
-                            </span>
-                          </div>
-                          <span className={`text-[10px] leading-relaxed block ${
-                            dbHubSelectedTab === "history" ? "text-slate-300" : "text-slate-400"
-                          }`}>
-                            Order manifest dispatch history, capturing quantities, custom shifts, and dates.
-                          </span>
-                        </button>
-
-                        <button
-                          onClick={() => setDbHubSelectedTab("subaccounts")}
-                          className={`p-4 rounded-xl text-left border transition relative flex flex-col gap-1.5 cursor-pointer ${
-                            dbHubSelectedTab === "subaccounts"
-                              ? "bg-slate-900 border-slate-900 text-white shadow-md"
-                              : "bg-slate-50/50 hover:bg-slate-50 border-slate-200 text-slate-700"
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-extrabold font-sans">Staff Passwords Table</span>
-                            <span className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded-full ${
-                              dbHubSelectedTab === "subaccounts" ? "bg-emerald-600 text-white" : "bg-slate-200 text-slate-600"
-                            }`}>
-                              {subAccounts.length} rows
-                            </span>
-                          </div>
-                          <span className={`text-[10px] leading-relaxed block ${
-                            dbHubSelectedTab === "subaccounts" ? "text-slate-300" : "text-slate-400"
-                          }`}>
-                            Locally cached sub-account staff login list with usernames, display-names, roles, and passwords.
-                          </span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
-          </div>
+          </main>
 
+          {/* Static Humanized Simple Footer */}
+          <footer className="border-t border-slate-200 bg-white py-5 px-6 text-center text-xs text-slate-400 font-mono mt-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div>Kitchen Order ERP System • Active Session Operator Workspace</div>
+            <div className="font-extrabold text-emerald-600 tracking-wider">DURABLE LOCAL DATABASE SYNC ACTIVE</div>
+          </footer>
         </div>
-
-      </main>
-
-      {/* Static Humanized Simple Footer */}
-      <footer className="border-t border-slate-200 bg-white py-6 mt-12 text-center text-xs text-slate-400 font-mono">
-        <div>Kitchen Order System Console • Active Session • Durable Local Database Hub Caching</div>
-      </footer>
-
-        </>
+      </div>
       )}
 
     </div>

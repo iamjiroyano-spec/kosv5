@@ -6,18 +6,16 @@ import {
   Trash2, 
   FileSpreadsheet, 
   ArrowRight,
-  Info,
   ChevronRight,
   Package,
   Sparkles,
   DollarSign,
-  Printer,
   Plus,
   Minus,
   CheckCircle2,
-  ListTodo
+  ListTodo,
+  Coins
 } from "lucide-react";
-import KitchenPrintPreview from "./KitchenPrintPreview";
 
 interface SidebarCartProps {
   items: KitchenItem[];
@@ -27,9 +25,12 @@ interface SidebarCartProps {
   onClearDraft: () => void;
   onSubmitOrder: () => void;
   currency?: { symbol: string; code: string };
+  onCurrencyChange?: (currency: { symbol: string; code: string }) => void;
   notes: string;
   onNotesChange: (notes: string) => void;
   isSubAccount?: boolean;
+  selectedSection?: string;
+  itemSectionTags?: Record<string, string>;
 }
 
 // Deterministic aesthetic styling for custom and standard categories to align with main catalog
@@ -61,18 +62,40 @@ export default function SidebarCart({
   onClearDraft,
   onSubmitOrder,
   currency = { symbol: "£", code: "GBP" },
+  onCurrencyChange,
   notes,
   onNotesChange,
   isSubAccount = false,
+  selectedSection = "All",
+  itemSectionTags = {},
 }: SidebarCartProps) {
-  const [isPrintOpen, setIsPrintOpen] = useState(false);
+  // Direct printing doesn't need interactive preview state anymore
   
-  // Extract drafted items list
+  // Compute total drafted item count regardless of active section filter
+  const totalAllDraftedCount = useMemo(() => {
+    let count = 0;
+    items.forEach(item => {
+      if ((quantities[item.Item_ID] || 0) > 0) {
+        count++;
+      }
+    });
+    return count;
+  }, [items, quantities]);
+
+  // Extract drafted items list matching active section selector
   const draftedItems = useMemo(() => {
     const list: OrderItem[] = [];
     items.forEach(item => {
       const q = quantities[item.Item_ID] || 0;
       if (q > 0) {
+        // Filter by kitchen section if selected
+        if (selectedSection !== "All") {
+          const itemSection = itemSectionTags[item.Item_ID] || "General";
+          if (itemSection !== selectedSection) {
+            return;
+          }
+        }
+
         const rate = item.Rate || 0;
         list.push({
           Item_ID: item.Item_ID,
@@ -86,7 +109,7 @@ export default function SidebarCart({
       }
     });
     return list;
-  }, [items, quantities]);
+  }, [items, quantities, selectedSection, itemSectionTags]);
 
   // Calculations
   const totalItemTypes = draftedItems.length;
@@ -94,62 +117,116 @@ export default function SidebarCart({
   const totalFinancialGross = draftedItems.reduce((acc, curr) => acc + curr.Gross, 0);
   const isCartEmpty = draftedItems.length === 0;
 
-  if (isCartEmpty) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 15 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-white rounded-3xl border border-slate-200/80 p-12 text-center shadow-xs flex flex-col items-center justify-center min-h-[460px] max-w-2xl mx-auto"
-        id="empty-cart-container"
-      >
-        <div className="bg-slate-50 p-5 rounded-2xl text-slate-350 mb-4 border border-dashed border-slate-200 shadow-inner relative">
-          <ShoppingCart className="h-9 w-9 text-slate-400" />
-          <span className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full bg-slate-300 border-2 border-white" />
-        </div>
-        <h3 className="font-display font-black text-slate-800 text-lg tracking-tight">
-          Staging Manifest is Quiet
-        </h3>
-        <p className="text-slate-500 text-xs mt-2 max-w-md leading-relaxed font-sans">
-          You haven't requested any items for this shift yet. Navigate to the Interacting Master Catalog on the left, type ingredient keywords, and adjust units to compile your manifest here.
-        </p>
-      </motion.div>
-    );
-  }
-
   return (
     <div className="flex flex-col gap-6" id="complete-checkout-workspace">
       
-      {/* Responsive Workspace Grid */}
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
+      {isCartEmpty ? (
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-3xl border border-slate-200/80 p-12 text-center shadow-xs flex flex-col items-center justify-center min-h-[360px] max-w-2xl mx-auto w-full"
+          id="empty-cart-container"
+        >
+          <div className="bg-slate-50 p-5 rounded-2xl text-slate-350 mb-4 border border-dashed border-slate-200 shadow-inner relative">
+            <ShoppingCart className="h-9 w-9 text-slate-400" />
+            <span className={`absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full border-2 border-white ${totalAllDraftedCount > 0 ? "bg-amber-400 animate-bounce" : "bg-slate-300"}`} />
+          </div>
+          {totalAllDraftedCount > 0 && selectedSection !== "All" ? (
+            <>
+              <h3 className="font-display font-black text-slate-800 text-lg tracking-tight">
+                No Drafts in "{selectedSection}" Section
+              </h3>
+              <p className="text-slate-500 text-xs mt-2 max-w-md leading-relaxed font-sans font-medium">
+                You have drafted <strong className="text-emerald-600 font-extrabold">{totalAllDraftedCount}</strong> items in total, but none belong to the <strong className="text-slate-700 font-bold">"{selectedSection}"</strong> section. Clear the section filter or select "All" to view and transmit the complete sheet!
+              </p>
+            </>
+          ) : (
+            <>
+              <h3 className="font-display font-black text-slate-800 text-lg tracking-tight">
+                Staging Manifest is Quiet
+              </h3>
+              <p className="text-slate-500 text-xs mt-2 max-w-md leading-relaxed font-sans font-medium">
+                You haven't requested any items for this shift yet. Use the speed search order sheet above to type ingredients, key in quantities, and compile your manifest right here!
+              </p>
+            </>
+          )}
+        </motion.div>
+      ) : (
+        /* Responsive Workspace Grid */
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
         
         {/* LEFT COLUMN: Detailed Interactive Manifest Sheet */}
         <div className="xl:col-span-8 flex flex-col gap-4">
           <div className="bg-white rounded-2xl border border-slate-200/85 overflow-hidden shadow-xs flex flex-col">
             
             {/* Manifest Header Controls */}
-            <div className="px-5 py-4 bg-slate-50/75 border-b border-slate-200/70 flex items-center justify-between">
+            <div className="px-5 py-4 bg-slate-50/75 border-b border-slate-200/70 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div className="flex items-center gap-3">
                 <div className="bg-emerald-50 border border-emerald-200 p-2 rounded-xl text-emerald-700 shadow-xs">
                   <ListTodo className="h-4 w-4" />
                 </div>
                 <div>
-                  <h3 className="font-display font-black text-slate-800 text-sm">
-                    Drafted Ingredients Manifest
-                  </h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-display font-black text-slate-800 text-sm">
+                      Drafted Ingredients Manifest
+                    </h3>
+                    {selectedSection !== "All" && (
+                      <span className="bg-emerald-50 text-emerald-700 px-2.5 py-0.5 rounded-full border border-emerald-200 text-[10px] font-black uppercase tracking-wider">
+                        {selectedSection}
+                      </span>
+                    )}
+                  </div>
                   <p className="text-[10px] text-slate-400 font-sans font-medium uppercase tracking-wider mt-0.5">
-                    Live compilation of shift requirements
+                    {selectedSection === "All" 
+                      ? "Live compilation of shift requirements" 
+                      : `Live compilation of "${selectedSection}" shift requirements only`}
                   </p>
                 </div>
               </div>
 
-              <button
-                id="wipe-draft-manifest-btn"
-                onClick={onClearDraft}
-                className="text-xs text-rose-600 hover:text-rose-700 font-bold hover:bg-rose-50 border border-transparent hover:border-rose-100 px-3 py-1.5 rounded-xl cursor-pointer transition flex items-center gap-1.5"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-                Wipe Staging
-              </button>
+              <div className="flex flex-wrap items-center gap-2.5">
+                {!isSubAccount && onCurrencyChange && (
+                  <div className="flex items-center gap-1.5 bg-white border border-slate-200 px-3 py-1.5 rounded-xl text-slate-650 inline-flex transition hover:border-slate-350 shadow-3xs select-none">
+                    <Coins className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                    <span className="text-[10px] uppercase tracking-wider font-extrabold text-slate-400 select-none">Curr:</span>
+                    <select
+                      id="default-currency-select"
+                      value={JSON.stringify(currency)}
+                      onChange={(e) => {
+                        try {
+                          onCurrencyChange(JSON.parse(e.target.value));
+                        } catch (err) {
+                          console.error("Failed to parse currency selection", err);
+                        }
+                      }}
+                      className="bg-transparent border-none text-xs font-bold text-slate-700 focus:outline-hidden pr-1 cursor-pointer font-sans"
+                      title="Choose default currency for the system"
+                    >
+                      <option value={JSON.stringify({ symbol: "KD", code: "KWD" })}>KWD (KD)</option>
+                      <option value={JSON.stringify({ symbol: "£", code: "GBP" })}>GBP (£)</option>
+                      <option value={JSON.stringify({ symbol: "$", code: "USD" })}>USD ($)</option>
+                      <option value={JSON.stringify({ symbol: "€", code: "EUR" })}>EUR (€)</option>
+                      <option value={JSON.stringify({ symbol: "AED", code: "AED" })}>AED</option>
+                      <option value={JSON.stringify({ symbol: "SAR", code: "SAR" })}>SAR</option>
+                      <option value={JSON.stringify({ symbol: "₱", code: "PHP" })}>PHP (₱)</option>
+                      <option value={JSON.stringify({ symbol: "₹", code: "INR" })}>INR (₹)</option>
+                      <option value={JSON.stringify({ symbol: "kr", code: "SEK" })}>SEK (kr)</option>
+                      <option value={JSON.stringify({ symbol: "kr", code: "NOK" })}>NOK (kr)</option>
+                      <option value={JSON.stringify({ symbol: "kr", code: "DKK" })}>DKK (kr)</option>
+                      <option value={JSON.stringify({ symbol: "CHF", code: "CHF" })}>CHF</option>
+                    </select>
+                  </div>
+                )}
+
+                <button
+                  id="wipe-draft-manifest-btn"
+                  onClick={onClearDraft}
+                  className="text-xs text-rose-605 hover:text-rose-700 font-bold hover:bg-rose-50 border border-transparent hover:border-rose-100 px-3 py-1.5 rounded-xl cursor-pointer transition flex items-center gap-1.5 bg-white shadow-3xs"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Wipe Staging
+                </button>
+              </div>
             </div>
 
             {/* Interactive Layout Table */}
@@ -320,7 +397,7 @@ export default function SidebarCart({
                 </span>
               </div>
               <span className="px-2.5 py-1 rounded-full bg-emerald-500 text-emerald-100 border border-emerald-400/30 text-[9px] font-extrabold uppercase font-mono tracking-wider animate-pulse">
-                {activeShift} active
+                {selectedSection !== "All" ? `${selectedSection} Section` : `${activeShift} Shift`}
               </span>
             </div>
           </div>
@@ -359,43 +436,107 @@ export default function SidebarCart({
               Transmit Manifest File
             </button>
 
-            <button
-              id="print-manifest-paper-btn"
-              onClick={() => setIsPrintOpen(true)}
-              disabled={isCartEmpty}
-              className={`w-full py-3.5 rounded-xl text-xs font-bold tracking-widest uppercase transition-all duration-200 flex items-center justify-center gap-2 border ${
-                isCartEmpty
-                  ? "bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed shadow-none"
-                  : "bg-white hover:bg-slate-50 border-slate-300 text-slate-700 hover:text-slate-900 cursor-pointer shadow-inner-sm active:scale-[0.98]"
-              }`}
-            >
-              <Printer className="h-4 w-4" />
-              Print Paper Copy
-            </button>
-
-            {/* Helper helpful box */}
-            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100/80 flex gap-3 items-start mt-1">
-              <Info className="h-4 w-4 text-slate-400 shrink-0 mt-0.5 animate-pulse" />
-              <p className="text-[10.5px] text-slate-500 leading-relaxed font-sans font-medium">
-                Our dynamic ordering engine processes selected quantities into a fully production-ready spreadsheet (`.xlsx`) containing exact shift rates and cumulative sums.
-              </p>
-            </div>
           </div>
 
         </div>
 
       </div>
+    )}
 
-      {/* Print Preview Overlay */}
-      <KitchenPrintPreview
-        isOpen={isPrintOpen}
-        onClose={() => setIsPrintOpen(false)}
-        items={items}
-        quantities={quantities}
-        activeShift={activeShift}
-        currency={currency}
-        isSubAccount={isSubAccount}
-      />
+      {/* Hidden Print-Only Layout representing the physical order manifest copy */}
+      <div id="printable-kitchen-manifest" className="hidden print:block font-sans p-8 bg-white text-black text-xs leading-relaxed">
+        <div className="border-b-2 border-slate-900 pb-4 mb-6">
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-2xl font-black tracking-tight uppercase text-slate-900">Kitchen Order Manifest</h1>
+              <p className="text-sm font-bold text-slate-600 mt-1">Draft Staging Context: {activeShift} Shift</p>
+            </div>
+            <div className="text-right">
+              <span className="inline-block bg-slate-900 text-white text-[10px] font-black px-2.5 py-1 rounded-sm tracking-wider uppercase">OFFICIAL REQUISITION</span>
+              <p className="text-[10px] text-slate-500 mt-1.5">Printed: {new Date().toLocaleString()}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-6 mb-6">
+          <div className="bg-slate-50/50 p-3 rounded border border-slate-200/60">
+            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Operational Details</h3>
+            <p className="font-bold text-slate-700">Target Shift: <span className="font-extrabold text-slate-950">{activeShift}</span></p>
+            <p className="font-medium text-slate-650 mt-1">Staging Version: LM-{Math.floor(1000 + Math.random() * 9000)}</p>
+          </div>
+          <div className="bg-slate-50/50 p-3 rounded border border-slate-200/60">
+            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Operational Summary</h3>
+            <p className="font-bold text-slate-750">Item Line Count: <span className="font-extrabold text-slate-950">{totalItemTypes} lines</span></p>
+            <p className="font-bold text-slate-750 mt-1">Total Packs Quantity: <span className="font-extrabold text-slate-950">{totalItemVolume} packs</span></p>
+          </div>
+        </div>
+
+        {/* Content Table */}
+        <table className="w-full text-left border-collapse border border-slate-300">
+          <thead>
+            <tr className="bg-slate-100 uppercase text-[9px] font-black text-slate-700 tracking-wider border-b border-slate-300">
+              <th className="p-2 border border-slate-300">Code</th>
+              <th className="p-2 border border-slate-300">Ingredient Description</th>
+              <th className="p-2 border border-slate-300 text-center">Category</th>
+              <th className="p-2 border border-slate-300 text-center">Unit</th>
+              <th className="p-2 border border-slate-300 text-center">Qty</th>
+              {!isSubAccount && (
+                <>
+                  <th className="p-2 border border-slate-300 text-right">Rate</th>
+                  <th className="p-2 border border-slate-300 text-right">Line Total</th>
+                </>
+              )}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-250">
+            {draftedItems.map((order) => (
+              <tr key={order.Item_ID} className="text-[11px] leading-tight text-slate-800">
+                <td className="p-2 border border-slate-300 font-mono font-bold text-slate-950">{order.Item_ID}</td>
+                <td className="p-2 border border-slate-300 font-bold">{order.Item_Name}</td>
+                <td className="p-2 border border-slate-300 text-center font-semibold">{order.Category}</td>
+                <td className="p-2 border border-slate-300 text-center font-semibold">{order.Unit_Type}</td>
+                <td className="p-2 border border-slate-300 text-center font-black font-mono">{order.Quantity}</td>
+                {!isSubAccount && (
+                  <>
+                    <td className="p-2 border border-slate-300 text-right font-mono font-medium">{currency.symbol}{order.Rate.toFixed(2)}</td>
+                    <td className="p-2 border border-slate-300 text-right font-mono font-bold text-slate-950">{currency.symbol}{order.Gross.toFixed(2)}</td>
+                  </>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        {!isSubAccount && (
+          <div className="flex justify-end mt-4 mb-6 pr-2">
+            <div className="text-right">
+              <span className="text-[10px] uppercase font-bold text-slate-450 block leading-none">Gross Cumulative Value</span>
+              <span className="text-lg font-black text-slate-950 block mt-1 tracking-tight">
+                {currency.symbol}{totalFinancialGross.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {notes && (
+          <div className="mt-4 p-3 border border-slate-300 bg-slate-50/50 rounded">
+            <h4 className="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">Staging Workspace Remarks / Dispatch Instructions</h4>
+            <p className="text-[10.5px] italic text-slate-850 font-medium whitespace-pre-wrap">{notes}</p>
+          </div>
+        )}
+
+        {/* Print signature blocks */}
+        <div className="mt-12 pt-6 border-t border-slate-200 grid grid-cols-2 gap-12 pr-4 text-center text-[10px] text-slate-400 font-bold">
+          <div>
+            <div className="h-10 border-b border-dashed border-slate-300"></div>
+            <p className="mt-2 text-slate-605">PREPARED BY STATION LEADER</p>
+          </div>
+          <div>
+            <div className="h-10 border-b border-dashed border-slate-300"></div>
+            <p className="mt-2 text-slate-605">AUTHORIZED STORE MANAGER</p>
+          </div>
+        </div>
+      </div>
 
     </div>
   );

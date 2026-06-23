@@ -44,8 +44,14 @@ export function sanitizeInventory(items: KitchenItem[]): KitchenItem[] {
 export function saveInventoryToStorage(items: KitchenItem[], userId?: string) {
   try {
     const sanitized = sanitizeInventory(items);
-    const key = userId ? `kitchen_inventory_catalog_v2_${userId}` : "kitchen_inventory_catalog_v2";
+    // Use the single centralized key "kitchen_inventory_catalog_v2" to share the master catalog across all accounts
+    const key = "kitchen_inventory_catalog_v2";
     localStorage.setItem(key, JSON.stringify(sanitized));
+
+    // Keep user-specific local storage backup in sync if userId is present (for backward compatibility)
+    if (userId) {
+      localStorage.setItem(`kitchen_inventory_catalog_v2_${userId}`, JSON.stringify(sanitized));
+    }
   } catch (e) {
     console.error("Failed to save catalog to storage", e);
   }
@@ -54,15 +60,17 @@ export function saveInventoryToStorage(items: KitchenItem[], userId?: string) {
 // Helper to load catalog from local storage (supports personalizing by userId)
 export function loadInventoryFromStorage(userId?: string): KitchenItem[] {
   try {
-    const key = userId ? `kitchen_inventory_catalog_v2_${userId}` : "kitchen_inventory_catalog_v2";
+    // Both admin and staff sub-accounts now load from the same main master catalog database key
+    const key = "kitchen_inventory_catalog_v2";
     let data = localStorage.getItem(key);
     
-    // Fallback: If personalized database does not exist yet, import default backup values to begin personal workspace
-    if (userId && !data) {
-      const defaultData = localStorage.getItem("kitchen_inventory_catalog_v2");
-      if (defaultData) {
-        localStorage.setItem(key, defaultData);
-        data = defaultData;
+    // Fallback: If they had existing personalized catalog data, migrate/copy it to the global master catalog
+    if (!data && userId) {
+      const userKey = `kitchen_inventory_catalog_v2_${userId}`;
+      const userData = localStorage.getItem(userKey);
+      if (userData) {
+        localStorage.setItem(key, userData);
+        data = userData;
       }
     }
     

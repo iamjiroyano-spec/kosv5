@@ -165,82 +165,27 @@ export function QuickCatalogSearch({
     }, 15);
   };
 
-  // Get active items staged
-  const stagedItems = useMemo(() => {
-    return items.filter((item) => (quantities[item.Item_ID] || 0) > 0);
-  }, [items, quantities]);
-
   return (
     <div 
       ref={containerRef}
-      className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 flex flex-col gap-4 relative font-sans"
+      className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 flex flex-col gap-4 relative font-sans md:w-[715.4px] w-full"
       id="fast-erp-order-sheet-container"
     >
       {/* Spreadsheet grid component */}
-      <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs bg-slate-50/50">
+      <div className="border border-slate-200 rounded-xl shadow-xs bg-slate-50/50">
         <table className="w-full text-left border-collapse text-xs select-none">
           <thead>
-            <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
-              <th className="p-3 border-r border-slate-200/60 w-[220px]">Item (Code / Search)</th>
-              <th className="p-3 border-r border-slate-200/60">Description</th>
-              <th className="p-3 border-r border-slate-200/60 text-center w-[120px]">Units</th>
-              <th className="p-3 text-right w-[150px]">Quantity</th>
+            <tr className="sticky top-0 z-10 bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
+              <th className="p-3 border-r border-slate-200/60 w-[220px] bg-slate-50">Item (Code / Search)</th>
+              <th className="p-3 border-r border-slate-200/60 bg-slate-50">Description</th>
+              <th className="p-3 border-r border-slate-200/60 text-center w-[120px] bg-slate-50">Units</th>
+              <th className="p-3 text-right w-[150px] bg-slate-50">Quantity</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200 bg-white">
-            {/* 1. Staged Spreadsheet records list */}
-            {stagedItems.map((staged) => {
-              const rowQty = quantities[staged.Item_ID] || 0;
-              return (
-                <tr 
-                  key={staged.Item_ID} 
-                  className="hover:bg-slate-50/40 border-b border-slate-100 transition duration-150 text-[11px]"
-                >
-                  <td className="p-2 border-r border-slate-200/60 font-mono font-bold text-slate-700 bg-slate-50/20">
-                    <div className="flex items-center justify-between gap-2 pl-1">
-                      <span className="text-[10px] font-black uppercase text-emerald-805 font-mono px-1.5 py-0.5 rounded bg-emerald-50/80 border border-emerald-100 select-all">
-                        {staged.Item_ID}
-                      </span>
-                      <span className="text-[9px] text-emerald-600 bg-emerald-50 px-1 rounded-sm flex items-center">
-                        ✓ Staged
-                      </span>
-                    </div>
-                  </td>
-                  <td className="p-2 border-r border-slate-200/60 text-slate-800 font-medium font-sans">
-                    {staged.Item_Name}
-                  </td>
-                  <td className="p-2 border-r border-slate-200/60 text-slate-500 font-sans text-center bg-slate-50/10">
-                    {staged.Unit_Type || "Packs"}
-                  </td>
-                  <td className="p-2">
-                    <div className="flex items-center justify-end gap-1.5 pl-4">
-                      <input
-                        type="number"
-                        min="0"
-                        step="any"
-                        value={rowQty}
-                        onChange={(e) => {
-                          const val = parseFloat(e.target.value) || 0;
-                          onQuantityChange(staged.Item_ID, Math.max(0, val));
-                        }}
-                        className="w-20 text-right bg-slate-50 border border-slate-200 focus:bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded px-2 py-1 text-xs font-mono font-black text-slate-900"
-                      />
-                      <button
-                        onClick={() => onQuantityChange(staged.Item_ID, 0)}
-                        className="text-slate-400 hover:text-rose-600 p-1 rounded hover:bg-rose-50 transition cursor-pointer"
-                        title="Remove row entry"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-
-            {/* 2. Active entry row at the bottom of the list */}
-            <tr className="bg-emerald-50/10 border-b-2 border-emerald-500/20 active-spreadsheet-row">
-              <td className="p-2 border-r border-slate-200/60 relative">
+            {/* Active entry row to directly stage orders */}
+            <tr className="bg-slate-50/95 border-b border-emerald-500/35 active-spreadsheet-row shadow-sm">
+              <td className="p-2 border-r border-slate-200/60 relative bg-slate-50/95">
                 <div className="relative flex items-center">
                   <input
                     ref={itemInputRef}
@@ -277,15 +222,8 @@ export function QuickCatalogSearch({
                     className="absolute left-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-lg z-50 overflow-hidden text-xs w-[480px] origin-top-left"
                     id="fast-suggest-popup-dropdown"
                   >
-                    {/* popup directory headers */}
-                    <div className="grid grid-cols-12 bg-slate-100 border-b border-slate-200 text-slate-500 font-bold p-2 text-[10px] uppercase tracking-wider select-none">
-                      <div className="col-span-6 px-1">Code & Name</div>
-                      <div className="col-span-3 text-center">Stock / On Hand</div>
-                      <div className="col-span-3 text-right pr-2">Unit</div>
-                    </div>
-
                     {/* popup directory records list */}
-                    <div className="max-h-60 overflow-y-auto divide-y divide-slate-100">
+                    <div className="max-h-[140px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent overscroll-contain divide-y divide-slate-100 z-50">
                       {suggestions.length > 0 ? (
                         suggestions.map((item, index) => {
                           const isSelected = index === focusedSuggestIndex;
@@ -320,7 +258,7 @@ export function QuickCatalogSearch({
                                 </span>
                               </div>
                               <div className="col-span-3 text-right pr-2 text-slate-500 font-sans truncate">
-                                {item.Unit_Type || "Packs"}
+                                    {item.Unit_Type || "Packs"}
                               </div>
                             </div>
                           );
@@ -334,7 +272,7 @@ export function QuickCatalogSearch({
                   </div>
                 )}
               </td>
-              <td className="p-2 border-r border-slate-200/60 bg-emerald-50/5 text-slate-600 font-medium">
+              <td className="p-2 border-r border-slate-200/60 bg-emerald-50/5 text-slate-600 font-medium bg-slate-50/95">
                 {previewItem ? (
                   <div className="flex flex-col">
                     <span className={`text-xs font-bold ${selectedItem ? "text-slate-800" : "text-emerald-700/80 italic font-medium"}`}>
@@ -348,7 +286,7 @@ export function QuickCatalogSearch({
                   <span className="text-slate-400 italic">Auto-resolved from input...</span>
                 )}
               </td>
-              <td className="p-2 border-r border-slate-200/60 bg-emerald-50/5 text-slate-550 font-mono text-center">
+              <td className="p-2 border-r border-slate-200/60 bg-emerald-50/5 text-slate-550 font-mono text-center bg-slate-50/95">
                 {previewItem ? (
                   <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${selectedItem ? "bg-slate-100 text-slate-600" : "bg-emerald-50 text-emerald-705 border border-emerald-200/50"}`}>
                     {previewItem.Unit_Type || "Packs"}
@@ -357,7 +295,7 @@ export function QuickCatalogSearch({
                   <span className="text-slate-400">-</span>
                 )}
               </td>
-              <td className="p-2 bg-emerald-50/10">
+              <td className="p-2 bg-emerald-50/10 bg-slate-50/95">
                 <div className="relative flex items-center">
                   <input
                     ref={qtyInputRef}
@@ -380,20 +318,6 @@ export function QuickCatalogSearch({
                 </div>
               </td>
             </tr>
-
-            {/* Empty spreadsheet placeholder hint if nothing is being input or chosen */}
-            {stagedItems.length === 0 && !activeCode && (
-              <tr>
-                <td colSpan={4} className="p-6 text-center text-slate-400 bg-slate-50/30">
-                  <div className="flex flex-col items-center gap-1.5">
-                    <Grid className="h-5 w-5 text-slate-300" />
-                    <span className="text-xs font-sans font-medium text-slate-400">
-                      Empty order manifest. Key in a product name or ID code above to start staging ingredients.
-                    </span>
-                  </div>
-                </td>
-              </tr>
-            )}
           </tbody>
         </table>
       </div>
