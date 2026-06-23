@@ -14,10 +14,16 @@ import {
   Globe,
   AlertTriangle,
   Copy,
-  ExternalLink
+  ExternalLink,
+  Search,
+  Tag,
+  Filter,
+  Package,
+  Sun,
+  Moon
 } from "lucide-react";
-import { AppUser, SubAccount } from "../types";
-import { loadSubAccountsFromStorage } from "../data";
+import { AppUser, SubAccount, KitchenItem } from "../types";
+import { loadSubAccountsFromStorage, loadInventoryFromStorage } from "../data";
 import { motion } from "motion/react";
 
 interface LoginScreenProps {
@@ -26,6 +32,9 @@ interface LoginScreenProps {
   onSubAccountSignIn: (user: AppUser) => void;
   triggerToast: (message: string, type: "success" | "info" | "rose") => void;
   authError?: string | null;
+  inventory?: KitchenItem[];
+  isDarkMode?: boolean;
+  onToggleDarkMode?: () => void;
 }
 
 export default function LoginScreen({
@@ -33,15 +42,41 @@ export default function LoginScreen({
   onLocalAdminSignIn,
   onSubAccountSignIn,
   triggerToast,
-  authError
+  authError,
+  inventory,
+  isDarkMode = false,
+  onToggleDarkMode
 }: LoginScreenProps) {
   const [subUsername, setSubUsername] = useState("");
   const [subPassword, setSubPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [liveTime, setLiveTime] = useState(new Date());
   const [copied, setCopied] = useState(false);
+  
+  const [activeCatalog, setActiveCatalog] = useState<KitchenItem[]>([]);
+  const [invSearchQuery, setInvSearchQuery] = useState("");
+  const [selectedInvCategory, setSelectedInvCategory] = useState("All");
+
+  useEffect(() => {
+    if (inventory && inventory.length > 0) {
+      setActiveCatalog(inventory);
+    } else {
+      setActiveCatalog(loadInventoryFromStorage());
+    }
+  }, [inventory]);
 
   const currentDomain = typeof window !== "undefined" ? window.location.hostname : "";
+
+  const categories = ["All", ...Array.from(new Set(activeCatalog.map(item => item.Category).filter(Boolean)))];
+
+  const filteredCatalog = activeCatalog.filter(item => {
+    const q = invSearchQuery.toLowerCase().trim();
+    const nameMatch = item.Item_Name.toLowerCase().includes(q);
+    const idMatch = item.Item_ID.toLowerCase().includes(q);
+    const supplierMatch = item.Supplier ? item.Supplier.toLowerCase().includes(q) : false;
+    const catMatch = selectedInvCategory === "All" || item.Category === selectedInvCategory;
+    return (nameMatch || idMatch || supplierMatch) && catMatch;
+  });
 
   const handleCopy = () => {
     navigator.clipboard.writeText(currentDomain);
@@ -136,6 +171,20 @@ export default function LoginScreen({
               {liveTime.toLocaleTimeString("en-US", { hour12: false })}
             </span>
           </div>
+          {onToggleDarkMode && (
+            <button
+              onClick={onToggleDarkMode}
+              type="button"
+              className="flex items-center justify-center p-1.5 rounded-lg border border-slate-700 bg-slate-800 text-slate-300 hover:text-white transition cursor-pointer select-none"
+              title={isDarkMode ? "Switch to Light theme" : "Switch to Dark theme"}
+            >
+              {isDarkMode ? (
+                <Sun className="h-3.5 w-3.5 text-amber-400" />
+              ) : (
+                <Moon className="h-3.5 w-3.5 text-slate-400" />
+              )}
+            </button>
+          )}
         </div>
       </div>
 
@@ -154,23 +203,7 @@ export default function LoginScreen({
             High-efficiency order orchestration & real-time inventory management. Log in to start receiving and routing active orders.
           </p>
 
-          {/* Quick Stats Grid */}
-          <div className="grid grid-cols-2 gap-3 mt-6">
-            <div className="bg-white rounded-xl border border-slate-200/60 p-3 shadow-xs text-left">
-              <span className="text-[9px] uppercase tracking-wider text-slate-400 font-bold font-mono">Suggested Active Shift</span>
-              <div className="flex items-center gap-1.5 mt-1">
-                <span className="text-sm">{currentShift.emoji}</span>
-                <span className="text-xs font-black text-slate-700">{currentShift.name}</span>
-              </div>
-            </div>
-            <div className="bg-white rounded-xl border border-slate-200/60 p-3 shadow-xs text-left">
-              <span className="text-[9px] uppercase tracking-wider text-slate-400 font-bold font-mono">Regional Target currency</span>
-              <div className="flex items-center gap-1 px-1 mt-1 bg-emerald-50 border border-emerald-100 rounded-lg w-max">
-                <span className="text-[10px] font-black text-emerald-800">KD (KWD)</span>
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
-              </div>
-            </div>
-          </div>
+          {/* Quick Stats Grid deleted as requested */}
         </div>
 
         {/* Credentials Form Card */}
@@ -321,6 +354,20 @@ export default function LoginScreen({
                         <strong className="text-amber-800">3.</strong> Click <strong>"Add Domain"</strong> and paste the copied domain from above, then save.
                       </p>
                     </div>
+
+                    <div className="pt-2 border-t border-amber-200/50">
+                      <p className="text-[10px] text-amber-800 font-bold mb-1.5">
+                        💡 Want to test instantly without modifying Firebase domain settings?
+                      </p>
+                      <button
+                        type="button"
+                        onClick={onLocalAdminSignIn}
+                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-sans text-[10px] font-black py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 transition active:scale-[0.98] cursor-pointer shadow-xs"
+                      >
+                        <Shield className="h-3.5 w-3.5" />
+                        <span>Bypass via Sandbox Administrator Access</span>
+                      </button>
+                    </div>
                   </div>
                 )}
 
@@ -361,6 +408,152 @@ export default function LoginScreen({
               </div>
             </div>
 
+          </div>
+        </div>
+
+        {/* Live Catalog / Inventory Explorer Section */}
+        <div className="w-full max-w-5xl bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden mt-8 p-6 sm:p-8 space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-150 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="bg-emerald-50 text-emerald-800 p-2.5 rounded-2xl border border-emerald-100">
+                <Database className="h-5.5 w-5.5 text-emerald-600" />
+              </div>
+              <div className="text-left">
+                <h3 className="text-lg font-black text-slate-800 tracking-tight font-sans">
+                  Live Master Catalog Explorer
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5 font-sans leading-normal">
+                  Real-time read-only stock lookup for kitchen staff and administrators before active session login.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 bg-emerald-50/60 px-4 py-2 rounded-2xl border border-emerald-200/50 font-mono text-xs font-bold text-emerald-800 self-start sm:self-center">
+              <Package className="h-4 w-4 text-emerald-600" />
+              <span>Catalog Records:</span>
+              <span className="bg-emerald-600 text-white px-2.5 py-0.5 rounded-lg text-[10.5px] ml-1 shadow-sm font-black text-center">
+                {activeCatalog.length}
+              </span>
+            </div>
+          </div>
+
+          {/* Filtering and search controls */}
+          <div className="bg-slate-50 border border-slate-200/60 rounded-2xl p-4 flex flex-col xl:flex-row gap-4 items-stretch xl:items-center justify-between">
+            {/* Search Input */}
+            <div className="relative flex-grow">
+              <input
+                type="text"
+                value={invSearchQuery}
+                onChange={(e) => setInvSearchQuery(e.target.value)}
+                placeholder="Lookup standard products, ID numbers, supplier strings..."
+                className="w-full pl-10 pr-4 py-2.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-800 font-sans shadow-3xs"
+              />
+              <span className="absolute left-3.5 top-3 text-slate-400 pointer-events-none">
+                <Search className="h-4 w-4 text-slate-400" />
+              </span>
+              {invSearchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setInvSearchQuery("")}
+                  className="absolute right-3 top-2.5 text-xs text-slate-450 hover:text-slate-650 bg-slate-100 font-bold px-1.5 py-0.5 rounded cursor-pointer"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+
+            {/* Category Select Filters */}
+            <div className="flex flex-wrap items-center gap-1.5 self-start xl:self-center">
+              <span className="text-[10px] font-extrabold uppercase text-slate-400 tracking-wider flex items-center gap-1 mr-1.5 font-sans">
+                <Filter className="h-3.5 w-3.5 text-slate-400" /> Category:
+              </span>
+              <div className="flex items-center gap-1">
+                {categories.slice(0, 4).map(cat => (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setSelectedInvCategory(cat)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                      selectedInvCategory === cat
+                        ? "bg-slate-900 text-white shadow-sm border border-slate-900"
+                        : "bg-white border border-slate-200/80 text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+                {categories.length > 4 && (
+                  <select
+                    value={categories.includes(selectedInvCategory) && categories.indexOf(selectedInvCategory) >= 4 ? selectedInvCategory : ""}
+                    onChange={(e) => {
+                      if (e.target.value) setSelectedInvCategory(e.target.value);
+                    }}
+                    className="px-2.5 py-1.5 rounded-xl text-xs font-black bg-white border border-slate-200 text-slate-500 hover:bg-slate-100 cursor-pointer focus:outline-none"
+                  >
+                    <option value="">More Directories...</option>
+                    {categories.slice(4).map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Table / List Grid scroll wrapper */}
+          <div className="border border-slate-200/90 rounded-2xl overflow-hidden bg-white shadow-3xs max-w-full">
+            <div className="overflow-x-auto max-h-80 overflow-y-auto custom-scrollbar">
+              {filteredCatalog.length > 0 ? (
+                <table className="w-full text-left border-collapse font-sans text-xs">
+                  <thead>
+                    <tr className="bg-slate-50/80 backdrop-blur-xs text-slate-400 font-extrabold uppercase border-b border-slate-200 tracking-wider text-[9.5px]">
+                      <th className="py-3 px-4">Identifier ID</th>
+                      <th className="py-3 px-4">Ingredient Name</th>
+                      <th className="py-3 px-4">Directory Category</th>
+                      <th className="py-3 px-4 text-right">Standard Cost Price</th>
+                      <th className="py-3 px-4 text-center">Packaging Unit</th>
+                      <th className="py-3 px-4 text-center">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredCatalog.map(item => (
+                      <tr key={item.Item_ID} className="hover:bg-slate-50/50 transition">
+                        <td className="py-3 px-4 font-mono font-black text-slate-450 select-all tracking-wider text-[11px]" style={{ maxWidth: "125px" }}>
+                          {item.Item_ID}
+                        </td>
+                        <td className="py-3 px-4 font-extrabold text-slate-800 text-[12px]">
+                          {item.Item_Name}
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-emerald-50 text-emerald-800 font-extrabold rounded-lg text-[9.5px] border border-emerald-100/50 shadow-3xs select-none">
+                            <Tag className="h-2.5 w-2.5 text-emerald-600" />
+                            {item.Category}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-right font-black text-slate-700 text-[12px]">
+                          ₪{item.Rate.toFixed(2)}
+                        </td>
+                        <td className="py-3 px-4 text-center text-slate-500 font-semibold">
+                          {item.Unit_Type}
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                            item.Status === "Active" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"
+                          }`}>
+                            {item.Status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <div className="py-14 text-center text-slate-450 flex flex-col items-center justify-center gap-2">
+                  <Database className="h-8 w-8 text-slate-350 animate-bounce" />
+                  <span className="text-xs font-black text-slate-700">No Catalog items found matching your filters</span>
+                  <p className="text-[10px] text-slate-400 mt-0.5">Try expanding search query terms or changing filters.</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

@@ -51,7 +51,9 @@ import {
   LogOut,
   Utensils,
   Menu,
-  Clock
+  Clock,
+  Sun,
+  Moon
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { motion, AnimatePresence } from "motion/react";
@@ -272,6 +274,29 @@ function detectCurrencyFromTimezone(): { symbol: string; code: string } {
 
 export default function App() {
   // --- States ---
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem("system_dark_mode");
+      return saved ? JSON.parse(saved) : false;
+    } catch {
+      return false;
+    }
+  });
+
+  // Sync dark mode class on document element
+  useEffect(() => {
+    try {
+      localStorage.setItem("system_dark_mode", JSON.stringify(isDarkMode));
+      if (isDarkMode) {
+        document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+      }
+    } catch (e) {
+      console.error("Failed to sync dark mode settings", e);
+    }
+  }, [isDarkMode]);
+
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   const [currency, setCurrency] = useState<{ symbol: string; code: string }>(() => {
     try {
@@ -1623,6 +1648,9 @@ export default function App() {
           }}
           triggerToast={triggerToast}
           authError={authError}
+          inventory={inventory}
+          isDarkMode={isDarkMode}
+          onToggleDarkMode={() => setIsDarkMode(prev => !prev)}
         />
       ) : (
         <div className="flex-grow flex flex-col lg:flex-row w-full min-h-screen relative">
@@ -1699,6 +1727,22 @@ export default function App() {
                   <p className="text-[10px] text-center text-slate-400 font-sans">
                     Secure SSO checks restrict google sign-in on live databases.
                   </p>
+
+                  {authError === "unauthorized-domain" && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-[11px] text-left text-amber-800 space-y-1.5 mt-2">
+                      <p className="font-bold">Authorized Domains Required</p>
+                      <p className="text-[10px] text-amber-700 leading-normal">
+                        Firebase blocks auth requests from this domain: <strong className="font-mono text-[9px] select-all bg-white px-1 py-0.5 rounded border border-amber-200">{typeof window !== "undefined" ? window.location.hostname : ""}</strong>. Setup authorized domains in your Firebase Console under Auth settings.
+                      </p>
+                    </div>
+                  )}
+
+                  {authError && authError !== "unauthorized-domain" && (
+                    <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 text-[11px] text-left text-rose-800 space-y-1 mt-2">
+                      <p className="font-bold">Auth Error</p>
+                      <p className="text-[10px] text-rose-700 leading-normal">{authError}</p>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -2044,12 +2088,26 @@ export default function App() {
               </span>
               <button
                 onClick={() => handleCurrencyChange(currency.code === "ILS" ? { symbol: "$", code: "USD" } : { symbol: "₪", code: "ILS" })}
-                className="text-slate-750 hover:text-slate-900 font-extrabold focus:outline-none px-1 py-0.5 rounded transition cursor-pointer select-none text-[11px]"
+                className="text-slate-755 hover:text-slate-900 font-extrabold focus:outline-none px-1 py-0.5 rounded transition cursor-pointer select-none text-[11px]"
                 title="Toggle Currency Standard"
               >
                 {currency.code} ({currency.symbol})
               </button>
             </div>
+
+            {/* Elegant Dark Mode Toggle */}
+            <button
+              onClick={() => setIsDarkMode(prev => !prev)}
+              type="button"
+              className="flex items-center justify-center p-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 hover:text-slate-900 transition shadow-3xs cursor-pointer select-none shrink-0"
+              title={isDarkMode ? "Switch to Light theme" : "Switch to Dark theme"}
+            >
+              {isDarkMode ? (
+                <Sun className="h-4 w-4 text-amber-400 animate-pulse" />
+              ) : (
+                <Moon className="h-4 w-4 text-emerald-600" />
+              )}
+            </button>
           </div>
         </header>
 

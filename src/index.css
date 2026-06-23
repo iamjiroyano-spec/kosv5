@@ -74,3 +74,164 @@
   }
 }
 
+/* Elegant Dark Mode styles */
+.dark {
+  color-scheme: dark;
+}
+
+.dark body, .dark html {
+  background-color: #0b0f19 !important; /* deep rich dark cosmic background */
+  color: #f8fafc !important;
+}
+
+/* Containers styled as bg-white */
+.dark .bg-white {
+  background-color: #111827 !important; /* slate-900 / gray-900 border */
+  color: #f1f5f9 !important;
+}
+
+/* Background canvas variables */
+.dark .bg-\[\#f8fafc\] {
+  background-color: #0b0f19 !important;
+}
+
+.dark .bg-slate-50 {
+  background-color: #1f2937 !important; /* dark slate border */
+  color: #f9fafb !important;
+}
+
+.dark .bg-slate-100 {
+  background-color: #374151 !important;
+  color: #f9fafb !important;
+}
+
+/* Borders */
+.dark .border-slate-200 {
+  border-color: #1f2937 !important;
+}
+
+.dark .border-slate-100 {
+  border-color: #1f2937 !important;
+}
+
+.dark .border-slate-150 {
+  border-color: #1f2937 !important;
+}
+
+.dark .border-slate-200\/80 {
+  border-color: #1f2937 !important;
+}
+
+.dark .border-slate-200\/60 {
+  border-color: #1f2937 !important;
+}
+
+.dark .border-slate-200\/85 {
+  border-color: #1f2937 !important;
+}
+
+/* Text styles */
+.dark .text-slate-900 {
+  color: #f9fafb !important;
+}
+
+.dark .text-slate-800 {
+  color: #f3f4f6 !important;
+}
+
+.dark .text-slate-700 {
+  color: #e5e7eb !important;
+}
+
+.dark .text-slate-650 {
+  color: #d1d5db !important;
+}
+
+.dark .text-slate-600 {
+  color: #9ca3af !important;
+}
+
+.dark .text-slate-500 {
+  color: #9ca3af !important;
+}
+
+.dark .text-slate-450 {
+  color: #9ca3af !important;
+}
+
+.dark .text-slate-400 {
+  color: #9ca3af !important;
+}
+
+/* Component specifics (inputs, select, etc.) */
+.dark input, 
+.dark select, 
+.dark textarea {
+  background-color: #111827 !important;
+  color: #f9fafb !important;
+  border-color: #1f2937 !important;
+}
+
+.dark input::placeholder {
+  color: #4b5563 !important;
+}
+
+.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #1f2937 !important;
+}
+
+.dark .divide-slate-250 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #1f2937 !important;
+}
+
+.dark .hover\:bg-slate-50:hover {
+  background-color: #1f2937 !important;
+}
+
+.dark .hover\:bg-slate-100:hover {
+  background-color: #374151 !important;
+}
+
+.dark tr:hover {
+  background-color: rgba(255, 255, 255, 0.02) !important;
+}
+
+.dark .bg-emerald-50\/60 {
+  background-color: rgba(16, 185, 129, 0.1) !important;
+  border-color: rgba(16, 185, 129, 0.2) !important;
+}
+
+.dark .text-emerald-800 {
+  color: #34d399 !important;
+}
+
+.dark .bg-emerald-50 {
+  background-color: rgba(16, 185, 129, 0.1) !important;
+  color: #34d399 !important;
+}
+
+.dark .text-slate-705 {
+  color: #e5e7eb !important;
+}
+
+.dark .border-emerald-100 {
+  border-color: rgba(16, 185, 129, 0.15) !important;
+}
+
+.dark .border-emerald-250\/50 {
+  border-color: rgba(16, 185, 129, 0.25) !important;
+}
+
+.dark .shadow-xl {
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5) !important;
+}
+
+.dark .shadow-2xl {
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6) !important;
+}
+
+.dark .shadow-sm {
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.3) !important;
+}
+
+
